@@ -1,0 +1,777 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Электротехника — 03_29 (ПУЭ)</title>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Roboto, sans-serif;
+            background: #f4f7fb;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+        }
+        .wrapper {
+            display: flex;
+            gap: 24px;
+            max-width: 1300px;
+            width: 100%;
+            align-items: flex-start;
+        }
+        .container {
+            flex: 1;
+            min-width: 0;
+            background: white;
+            padding: 30px 25px;
+            border-radius: 20px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
+        }
+        .nav-panel {
+            flex-shrink: 0;
+            width: 210px;
+            background: white;
+            padding: 18px 16px;
+            border-radius: 20px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
+            position: sticky;
+            top: 20px;
+            max-height: calc(100vh - 40px);
+            overflow-y: auto;
+        }
+        .nav-panel h3 {
+            font-size: 15px;
+            margin: 0 0 12px 0;
+            color: #1a2a3a;
+            text-align: center;
+            border-bottom: 1px solid #e6edf5;
+            padding-bottom: 10px;
+        }
+        .nav-grid {
+            display: grid;
+            grid-template-columns: repeat(10, 1fr);
+            gap: 3px;
+        }
+        .nav-cell {
+            aspect-ratio: 1 / 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            font-weight: 600;
+            border-radius: 6px;
+            cursor: pointer;
+            background: #eef4fa;
+            color: #1a2a3a;
+            transition: 0.15s;
+            border: 2px solid transparent;
+            user-select: none;
+        }
+        .nav-cell:hover { background: #d0ddea; transform: scale(1.05); }
+        .nav-cell.correct { background: #1e9b4c; color: white; border-color: #1a7a3a; }
+        .nav-cell.wrong { background: #d43f34; color: white; border-color: #b33a2e; }
+        .nav-cell.current { border-color: #1a6bc4; box-shadow: 0 0 0 2px #1a6bc4; }
+        .nav-cell.unanswered { background: #eef4fa; color: #4a6a8a; }
+        .nav-stats {
+            margin-top: 12px;
+            font-size: 13px;
+            color: #2a4a6a;
+            text-align: center;
+            border-top: 1px solid #e6edf5;
+            padding-top: 10px;
+        }
+        .nav-stats span { font-weight: 700; }
+        .nav-stats .green { color: #1a7a3a; }
+        .nav-stats .red { color: #b33a2e; }
+
+        h1 {
+            font-size: 22px;
+            margin-top: 0;
+            color: #1a2a3a;
+            border-bottom: 2px solid #e6edf5;
+            padding-bottom: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        h1 small { font-size: 16px; font-weight: normal; color: #4a6a8a; }
+        .progress { background: #e6edf5; border-radius: 30px; height: 8px; margin: 10px 0 20px; overflow: hidden; }
+        .progress-bar { height: 100%; background: #2a7de1; border-radius: 30px; transition: width 0.3s ease; width: 0%; }
+        .question-block {
+            background: #f9fcff;
+            border-radius: 14px;
+            padding: 18px 20px 10px;
+            margin-bottom: 20px;
+            border: 1px solid #e2ebf5;
+            transition: 0.2s;
+        }
+        .question-block.correct { border-left: 6px solid #1e9b4c; background: #f0faf4; }
+        .question-block.wrong { border-left: 6px solid #d43f34; background: #fdf2f0; }
+        .question-text { font-weight: 600; font-size: 15px; color: #0b1e2e; margin-bottom: 12px; line-height: 1.5; }
+        .question-text .q-label {
+            background: #1a6bc4;
+            color: white;
+            padding: 2px 10px;
+            border-radius: 12px;
+            font-size: 12px;
+            margin-right: 8px;
+            display: inline-block;
+        }
+        .options { display: flex; flex-direction: column; gap: 6px; padding-left: 4px; }
+        .option {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            padding: 8px 12px;
+            border-radius: 10px;
+            background: white;
+            border: 1px solid #dce6f0;
+            cursor: pointer;
+            transition: 0.15s;
+            font-size: 14px;
+            line-height: 1.4;
+        }
+        .option:hover { background: #eef4fa; border-color: #b0c8df; }
+        .option input[type="radio"] { margin-top: 4px; flex-shrink: 0; accent-color: #1a6bc4; width: 17px; height: 17px; cursor: pointer; }
+        .option.selected-correct { background: #d4edda; border-color: #1e9b4c; }
+        .option.selected-wrong { background: #f8ddda; border-color: #d43f34; }
+        .option.show-correct { background: #d4edda; border-color: #1e9b4c; }
+        .option.disabled { cursor: default; opacity: 0.9; }
+        .option.disabled:hover { background: white; }
+        .option.disabled.selected-correct:hover { background: #d4edda; }
+        .option.disabled.selected-wrong:hover { background: #f8ddda; }
+        .option.disabled.show-correct:hover { background: #d4edda; }
+        .result-badge { margin-top: 10px; font-size: 14px; font-weight: 500; }
+        .result-badge .correct-text { color: #1a7a3a; }
+        .result-badge .wrong-text { color: #b33a2e; }
+        .pagination {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-top: 25px;
+            padding-top: 20px;
+            border-top: 1px solid #e2ebf5;
+        }
+        .pagination .info { font-size: 15px; color: #2a4a6a; }
+        .btn {
+            background: #e6edf5;
+            border: none;
+            padding: 10px 24px;
+            border-radius: 30px;
+            font-size: 15px;
+            font-weight: 600;
+            color: #1a2a3a;
+            cursor: pointer;
+            transition: 0.15s;
+        }
+        .btn:hover { background: #d0ddea; }
+        .btn-primary { background: #1a6bc4; color: white; }
+        .btn-primary:hover { background: #0f5aad; }
+        .btn-secondary { background: #e6edf5; }
+        .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+        .btn:disabled:hover { background: #e6edf5; }
+        .restart-btn { background: #d43f34; color: white; }
+        .restart-btn:hover { background: #b83228; }
+        .footer { margin-top: 15px; text-align: center; font-size: 14px; color: #6a8aaa; }
+        .summary {
+            background: #f0f4fa;
+            border-radius: 16px;
+            padding: 20px 24px;
+            margin-top: 10px;
+            border: 2px solid #d0ddea;
+        }
+        .summary h3 { margin-top: 0; color: #1a2a3a; }
+        .summary-item { padding: 6px 0; border-bottom: 1px solid #dce6f0; font-size: 14px; line-height: 1.5; }
+        .summary-item:last-child { border-bottom: none; }
+        .summary-item .s-correct { color: #1a7a3a; font-weight: 600; }
+        .summary-item .s-wrong { color: #b33a2e; font-weight: 600; }
+        .summary-stats { font-size: 18px; font-weight: 700; padding: 12px 0 8px; }
+        .hide-summary-btn { margin-top: 12px; }
+        .scroll-anchor { scroll-margin-top: 20px; }
+
+        @media (max-width: 960px) {
+            .wrapper { flex-direction: column; }
+            .nav-panel { width: 100%; position: static; max-height: none; order: -1; }
+            .nav-grid { grid-template-columns: repeat(10, 1fr); }
+        }
+        @media (max-width: 600px) {
+            .container { padding: 16px; }
+            .question-text { font-size: 14px; }
+            .option { font-size: 13px; padding: 6px 10px; }
+            .pagination { flex-direction: column; align-items: stretch; }
+            .pagination .info { text-align: center; }
+            .btn { padding: 10px 16px; font-size: 14px; }
+            .nav-panel { padding: 12px; }
+            .nav-grid { gap: 3px; }
+            .nav-cell { font-size: 10px; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="wrapper">
+    <div class="container" id="app">
+        <h1>
+            <span>⚡ ПУЭ — 03_29</span>
+            <small id="totalStats">0 / 29</small>
+        </h1>
+        <div class="progress">
+            <div class="progress-bar" id="progressBar"></div>
+        </div>
+
+        <div id="topAnchor" class="scroll-anchor"></div>
+
+        <div id="questionsContainer"></div>
+        <div id="summaryContainer"></div>
+
+        <div class="pagination" id="paginationControls">
+            <span class="info" id="pageInfo">Страница 1 из 1</span>
+            <div>
+                <button class="btn btn-secondary" id="prevBtn" disabled>◀ Назад</button>
+                <button class="btn btn-primary" id="nextBtn">Вперед ▶</button>
+                <button class="btn restart-btn" id="restartBtn" style="margin-left:10px;">⟳ Заново</button>
+            </div>
+        </div>
+        <div class="footer">
+            Всего вопросов: 29
+        </div>
+    </div>
+
+    <div class="nav-panel" id="navPanel">
+        <h3>📋 Навигация</h3>
+        <div class="nav-grid" id="navGrid"></div>
+        <div class="nav-stats" id="navStats">
+            ✅ <span class="green" id="navCorrect">0</span> &nbsp;|&nbsp; ❌ <span class="red" id="navWrong">0</span> &nbsp;|&nbsp; ⬜ <span id="navUnanswered">0</span>
+        </div>
+    </div>
+</div>
+
+<script>
+    // --------------------------------------------------------------
+    // ВОПРОСЫ ИЗ 03_29.docx (вопросы 31–59) — 29 шт.
+    // --------------------------------------------------------------
+    const RAW_QUESTIONS = [
+        {
+            id: 31,
+            question: "Как классифицируются помещения в отношении опасности поражения людей электрическим током согласно Правилам устройства электроустановок?",
+            correctAnswer: "Помещения без повышенной опасности, помещения с повышенной опасностью, особо опасные помещения",
+            options: [
+                "Помещения без повышенной опасности и помещения с повышенной опасностью",
+                "Помещения без повышенной опасности, помещения с повышенной опасностью, особо опасные помещения",
+                "Неопасные, опасные и особо опасные помещения",
+                "Неопасные, малоопасные, опасные и особо опасные помещения"
+            ]
+        },
+        {
+            id: 32,
+            question: "Какие помещения относятся к помещениям с повышенной опасностью поражения людей электрическим током согласно Правилам устройства электроустановок?",
+            correctAnswer: "Любое из перечисленных помещений относится к помещениям с повышенной опасностью",
+            options: [
+                "Помещения, характеризующиеся наличием сырости или токопроводящей пыли",
+                "Помещения, характеризующиеся наличием металлических, земляных, железобетонных и других токопроводящих полов",
+                "Помещения, характеризующиеся наличием высокой температуры",
+                "Помещения, характеризующиеся возможностью одновременного прикосновения человека к металлоконструкциям зданий, имеющим соединение с землей, технологическим аппаратам, механизмам и т.п. с одной стороны, и к металлическим корпусам электрооборудования (открытым проводящим частям) - с другой",
+                "Любое из перечисленных помещений относится к помещениям с повышенной опасностью"
+            ]
+        },
+        {
+            id: 33,
+            question: "Какие помещения называются сырыми согласно Правилам устройства электроустановок?",
+            correctAnswer: "Помещения, в которых относительная влажность воздуха превышает 75 %",
+            options: [
+                "Помещения, в которых относительная влажность воздуха не превышает 60 %",
+                "Помещения, в которых относительная влажность воздуха превышает 75 %",
+                "Помещения, в которых относительная влажность воздуха не превышает 70 %",
+                "Помещения, в которых относительная влажность воздуха превышает 65 %"
+            ]
+        },
+        {
+            id: 34,
+            question: "Какие помещения относятся к влажным согласно Правилам устройства электроустановок?",
+            correctAnswer: "Помещения, в которых относительная влажность воздуха больше 60 %, но не превышает 75 %",
+            options: [
+                "Помещения, в которых относительная влажность воздуха больше 60 %, но не превышает 75 %",
+                "Помещения, в которых относительная влажность воздуха в пределах 80 %",
+                "Помещения, в которых относительная влажность воздуха больше 75 %, но не превышает 90 %",
+                "Помещения, в которых относительная влажность воздуха близка к 100 %"
+            ]
+        },
+        {
+            id: 35,
+            question: "Какие помещения называются сухими согласно Правилам устройства электроустановок?",
+            correctAnswer: "Помещения, в которых относительная влажность воздуха не превышает 60 %",
+            options: [
+                "Помещения, в которых относительная влажность воздуха не превышает 60 %",
+                "Помещения, в которых относительная влажность воздуха не превышает 75 %",
+                "Помещения, в которых относительная влажность воздуха не превышает 70 %",
+                "Помещения, в которых относительная влажность воздуха близка к 65 %"
+            ]
+        },
+        {
+            id: 36,
+            question: "Каким образом должны быть обозначены нулевые рабочие (нейтральные) проводники в электроустановках согласно Правилам устройства электроустановок?",
+            correctAnswer: "Буквой N и голубым цветом",
+            options: [
+                "Буквой N и голубым цветом",
+                "Буквой N и белым цветом",
+                "Буквой Н и голубым цветом",
+                "Буквой Н и серым цветом"
+            ]
+        },
+        {
+            id: 37,
+            question: "Каким образом обозначаются проводники защитного заземления, а также нулевые защитные проводники в электроустановках напряжением до 1 кВ с глухозаземленной нейтралью согласно Правилам устройства электроустановок?",
+            correctAnswer: "Обозначаются PE и имеют цветовое обозначение чередующимися продольными или поперечными полосами одинаковой ширины желтого и зеленого цветов",
+            options: [
+                "Обозначаются PE и имеют цветовое обозначение чередующимися продольными или поперечными полосами одинаковой ширины желтого и зеленого цветов",
+                "Обозначаются RE и имеют цветовое обозначение чередующимися продольными или поперечными полосами одинаковой ширины белого и зеленого цветов",
+                "Обозначаются PE и имеют цветовое обозначение чередующимися продольными или поперечными полосами одинаковой ширины желтого и белого цветов"
+            ]
+        },
+        {
+            id: 38,
+            question: "Каким цветом должны быть обозначены шины трехфазного тока согласно Правилам устройства электроустановок?",
+            correctAnswer: "Шины фазы A - желтым, фазы B - зеленым, фазы C - красным цветом",
+            options: [
+                "Шины фазы A - зеленым, фазы B - желтым, фазы C - красным цветом",
+                "Шины фазы A - зеленым, фазы B - красным, фазы C - желтым цветом",
+                "Шины фазы A - желтым, фазы B - зеленым, фазы C - красным цветом",
+                "Шины фазы A - красным, фазы B - зеленым, фазы C - желтым цветом"
+            ]
+        },
+        {
+            id: 39,
+            question: "Как обозначаются шины при переменном однофазном токе согласно Правилам устройства электроустановок?",
+            correctAnswer: "Шина B, присоединенная к концу обмотки источника питания, - красным цветом, шина A, присоединенная к началу обмотки источника питания, - желтым цветом",
+            options: [
+                "Шина B, присоединенная к концу обмотки источника питания, - красным цветом, шина A, присоединенная к началу обмотки источника питания, - желтым цветом",
+                "Шина B, присоединенная к концу обмотки источника питания, - зеленым цветом, шина A, присоединенная к началу обмотки источника питания, - желтым цветом",
+                "Шина А, присоединенная к концу обмотки источника питания, - синим цветом, шина В, присоединенная к началу обмотки источника питания, - зеленым цветом",
+                "Шина B, присоединенная к концу обмотки источника питания, - голубым цветом, шина A, присоединенная к началу обмотки источника питания, - зеленым цветом"
+            ]
+        },
+        {
+            id: 40,
+            question: "Как обозначаются шины при постоянном токе согласно Правилам устройства электроустановок?",
+            correctAnswer: "Положительная шина (+) - красным цветом, отрицательная (-) - синим и нулевая рабочая M - голубым цветом",
+            options: [
+                "Положительная шина (+) - красным цветом, отрицательная (-) - синим и нулевая рабочая M - голубым цветом",
+                "Положительная шина (+) - синим цветом, отрицательная (-) - красным и нулевая рабочая M - голубым цветом",
+                "Положительная шина (+) - зеленым цветом, отрицательная (-) - красным и нулевая рабочая M - голубым цветом",
+                "Положительная шина (+) - желтым цветом, отрицательная (-) - зеленым и нулевая рабочая M - голубым цветом"
+            ]
+        },
+        {
+            id: 41,
+            question: "Что называется приемником электрической энергии (электроприемником) согласно Правилам устройства электроустановок?",
+            correctAnswer: "Аппарат, агрегат и др., предназначенный для преобразования электрической энергии в другой вид энергии",
+            options: [
+                "Распределительное устройство, предназначенное для обеспечения потребителей электрической энергией",
+                "Подстанция, работающая на определенной территории",
+                "Электроустановка, предназначенная для обеспечения потребителей электрической энергией",
+                "Аппарат, агрегат и др., предназначенный для преобразования электрической энергии в другой вид энергии"
+            ]
+        },
+        {
+            id: 42,
+            question: "Что называется потребителем электрической энергии согласно Правилам устройства электроустановок?",
+            correctAnswer: "Электроприемник или группа электроприемников, объединенных технологическим процессом и размещающихся на определенной территории",
+            options: [
+                "Электрическая часть энергосистемы и питающиеся от нее приемники электрической энергии, объединенные общностью процесса передачи и распределения электрической энергии",
+                "Электрические и тепловые сети, связанные общностью режимов в непрерывном процессе преобразования, передачи и распределения электрической и тепловой энергии",
+                "Электроприемник или группа электроприемников, объединенных технологическим процессом и размещающихся на определенной территории",
+                "Системы электроснабжения подземных, тяговых и других специальных установок, связанных общностью технологических процессов"
+            ]
+        },
+        {
+            id: 43,
+            question: "Что является определением термина \"Защита от прямого прикосновения\" согласно Правилам устройства электроустановок?",
+            correctAnswer: "Защита для предотвращения прикосновения к токоведущим частям, находящимся под напряжением",
+            options: [
+                "Защита от поражения электрическим током, при прикосновении к открытым проводящим частям, оказавшимся под напряжением, при повреждении изоляции",
+                "Защита людей или животных от электрического контакта с открытыми проводящими частями",
+                "Защита для предотвращения прикосновения к токоведущим частям, находящимся под напряжением"
+            ]
+        },
+        {
+            id: 44,
+            question: "Что является определением термина \"Защита при косвенном прикосновении\" согласно Правилам устройства электроустановок?",
+            correctAnswer: "Защита от поражения электрическим током, при прикосновении к открытым проводящим частям, оказавшимся под напряжением, при повреждении изоляции",
+            options: [
+                "Защита от поражения электрическим током, при прикосновении к открытым проводящим частям, оказавшимся под напряжением, при повреждении изоляции",
+                "Защита от напряжения, возникающего при стекании тока с заземлителя в землю, между точкой ввода тока в заземлитель и зоной нулевого потенциала",
+                "Защита для предотвращения прикосновения к токоведущим частям, находящимся под напряжением"
+            ]
+        },
+        {
+            id: 45,
+            question: "Что является определением термина \"Заземлитель\" согласно Правилам устройства электроустановок?",
+            correctAnswer: "Проводящая часть или совокупность соединенных между собой проводящих частей, находящихся в электрическом контакте с землей непосредственно или через промежуточную проводящую среду",
+            options: [
+                "Проводящая часть, не являющаяся частью электроустановки",
+                "Проводящая часть или совокупность соединенных между собой проводящих частей, находящихся в электрическом контакте с землей непосредственно или через промежуточную проводящую среду",
+                "Сторонняя проводящая часть, находящаяся в электрическом контакте с землей непосредственно или через промежуточную проводящую среду, используемая для целей заземления"
+            ]
+        },
+        {
+            id: 46,
+            question: "Что является определением термина \"Искусственный заземлитель\" согласно Правилам устройства электроустановок?",
+            correctAnswer: "Заземлитель, специально выполняемый для целей заземления",
+            options: [
+                "Заземлитель, специально выполняемый для целей заземления",
+                "Преднамеренное электрическое соединение какой-либо точки сети, электроустановки или оборудования с заземляющим устройством",
+                "Сторонняя проводящая часть, находящаяся в электрическом контакте с землей непосредственно или через промежуточную проводящую среду, используемая для целей заземления"
+            ]
+        },
+        {
+            id: 47,
+            question: "Что является определением термина \"Естественный заземлитель\" согласно Правилам устройства электроустановок?",
+            correctAnswer: "Сторонняя проводящая часть, находящаяся в электрическом контакте с землей непосредственно или через промежуточную проводящую среду, используемая для целей заземления",
+            options: [
+                "Проводящая часть или совокупность соединенных между собой проводящих частей, находящихся в электрическом контакте с землей непосредственно или через промежуточную проводящую среду",
+                "Проводящая часть, не являющаяся частью электроустановки",
+                "Сторонняя проводящая часть, находящаяся в электрическом контакте с землей непосредственно или через промежуточную проводящую среду, используемая для целей заземления"
+            ]
+        },
+        {
+            id: 48,
+            question: "Что является определением термина \"Заземление\" согласно Правилам устройства электроустановок?",
+            correctAnswer: "Преднамеренное электрическое соединение какой-либо точки сети, электроустановки или оборудования с заземляющим устройством",
+            options: [
+                "Преднамеренное электрическое соединение какой-либо точки сети, электроустановки или оборудования с заземляющим устройством",
+                "Заземление точки или точек токоведущих частей электроустановки, выполняемое для обеспечения работы электроустановки",
+                "Заземление, выполняемое в целях электробезопасности"
+            ]
+        },
+        {
+            id: 49,
+            question: "Что является определением термина \"Защитное заземление\" согласно Правилам устройства электроустановок?",
+            correctAnswer: "Заземление, выполняемое в целях электробезопасности",
+            options: [
+                "Заземление, выполняемое в целях электробезопасности",
+                "Заземление точки или точек токоведущих частей электроустановки, выполняемое для обеспечения работы электроустановки",
+                "Преднамеренное электрическое соединение какой-либо точки сети, электроустановки или оборудования с заземляющим устройством"
+            ]
+        },
+        {
+            id: 50,
+            question: "Что является определением термина \"Основная изоляция\" согласно Правилам устройства электроустановок?",
+            correctAnswer: "Изоляция токоведущих частей, обеспечивающая, в том числе, защиту от прямого прикосновения",
+            options: [
+                "Изоляция в электроустановках напряжением до 1 кВ, обеспечивающая степень защиты от поражения электрическим током",
+                "Изоляция токоведущих частей, обеспечивающая, в том числе, защиту от прямого прикосновения",
+                "Независимая изоляция в электроустановках напряжением до 1 кВ, для защиты при косвенном прикосновении"
+            ]
+        },
+        {
+            id: 51,
+            question: "Что является определением термина \"Двойная изоляция\" согласно Правилам устройства электроустановок?",
+            correctAnswer: "Изоляция в электроустановках напряжением до 1 кВ, состоящая из основной и дополнительной изоляции",
+            options: [
+                "Изоляция в электроустановках напряжением до 1 кВ, состоящая из основной и дополнительной изоляции",
+                "Независимая изоляция в электроустановках напряжением до 1 кВ, выполняемая дополнительно к основной изоляции для защиты при косвенном прикосновении",
+                "Изоляция в электроустановках напряжением до 1 кВ, обеспечивающая степень защиты от поражения электрическим током, равноценную двойной изоляции"
+            ]
+        },
+        {
+            id: 52,
+            question: "Что является определением термина \"Усиленная изоляция\" согласно Правилам устройства электроустановок?",
+            correctAnswer: "Изоляция в электроустановках напряжением до 1 кВ, обеспечивающая степень защиты от поражения электрическим током, равноценная двойной изоляции",
+            options: [
+                "Независимая изоляция в электроустановках напряжением до 1 кВ, выполняемая дополнительно к основной изоляции для защиты при косвенном прикосновении",
+                "Изоляция в электроустановках напряжением до 1 кВ, обеспечивающая степень защиты от поражения электрическим током, равноценная двойной изоляции",
+                "Изоляция в электроустановках напряжением до 1 кВ, состоящая из основной и дополнительной изоляции"
+            ]
+        },
+        {
+            id: 53,
+            question: "Что может быть применено для защиты при косвенном прикосновении в цепях, питающих переносные электроприемники, согласно Правилам устройства электроустановок?",
+            correctAnswer: "Любая из перечисленных мер защиты, в зависимости от категории помещения по уровню опасности поражения людей электрическим током",
+            options: [
+                "Автоматическое отключение питания",
+                "Защитное электрическое разделение цепей",
+                "Сверхнизкое напряжение",
+                "Двойная изоляция",
+                "Любая из перечисленных мер защиты, в зависимости от категории помещения по уровню опасности поражения людей электрическим током"
+            ]
+        },
+        {
+            id: 54,
+            question: "Допускается ли прохождение воздушной линии электропередачи по территории стадионов, учебных и детских учреждений согласно Правилам устройства электроустановок?",
+            correctAnswer: "Не допускается",
+            options: [
+                "Не допускается",
+                "Допускается",
+                "Допускается при согласовании с территориальными органами Ростехнадзора",
+                "Допускается при соответствующем обосновании в рабочей документации"
+            ]
+        },
+        {
+            id: 55,
+            question: "Какое напряжение должно применяться для питания переносных светильников в помещениях с повышенной опасностью и особо опасных помещениях согласно Правилам устройства электроустановок?",
+            correctAnswer: "Напряжение не выше 50 В",
+            options: [
+                "Напряжение не выше 50 В",
+                "Напряжение не выше 110 В",
+                "Напряжение не выше 220 В",
+                "Напряжение не выше 127 В"
+            ]
+        },
+        {
+            id: 56,
+            question: "Для чего предназначено освещение безопасности согласно Правилам устройства электроустановок?",
+            correctAnswer: "Для продолжения работы при аварийном отключении рабочего освещения",
+            options: [
+                "Для продолжения работы при аварийном отключении рабочего освещения",
+                "Для освещения территории в нерабочее время",
+                "Для установки вдоль границ территорий, охраняемых специальным персоналом",
+                "Для обеспечения освещения вне производственных помещений"
+            ]
+        },
+        {
+            id: 57,
+            question: "Что используется при присоединении переносной или передвижной электросварочной установки непосредственно к стационарной электрической сети согласно Правилам устройства электроустановок?",
+            correctAnswer: "Коммутационный и защитный аппараты (аппарат) с разборными или разъемными контактными соединениями",
+            options: [
+                "Автоматический выключатель и предохранители",
+                "Коммутационный и защитный аппараты (аппарат) с разборными или разъемными контактными соединениями",
+                "Измерительный прибор"
+            ]
+        },
+        {
+            id: 58,
+            question: "Какой максимально допустимой длины должен быть гибкий кабель, соединяющий источник сварочного тока и коммутационный аппарат, согласно Правилам устройства электроустановок?",
+            correctAnswer: "Не больше 15 м",
+            options: [
+                "Не больше 15 м",
+                "Не больше 30 м",
+                "Не больше 20 м"
+            ]
+        },
+        {
+            id: 59,
+            question: "При каком напряжении шкафы комплектных устройств и корпуса сварочного оборудования (машин), имеющие неизолированные токоведущие части, должны быть оснащены блокировкой, обеспечивающей при открывании дверей (дверец) отключение от электрической сети устройств, находящихся внутри шкафа (корпуса), согласно Правилам устройства электроустановок?",
+            correctAnswer: "Выше 50 В переменного или выше 110 В постоянного тока",
+            options: [
+                "Выше 24 В переменного или выше 60 В постоянного тока",
+                "Выше 36 В переменного или выше 60 В постоянного тока",
+                "Выше 50 В переменного или выше 110 В постоянного тока"
+            ]
+        }
+    ];
+
+    // --------------------------------------------------------------
+    // Перемешивание и состояние
+    // --------------------------------------------------------------
+    function shuffleArray(arr) {
+        const a = [...arr];
+        for (let i = a.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [a[i], a[j]] = [a[j], a[i]];
+        }
+        return a;
+    }
+
+    let allQuestions = [];
+    let currentPage = 0;
+    const PER_PAGE = 5;
+    let answers = {};
+    let testCompleted = false;
+
+    function scrollToTop() {
+        document.getElementById('topAnchor').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    function init() {
+        const shuffled = shuffleArray(RAW_QUESTIONS);
+        allQuestions = shuffled.map(q => ({ ...q, options: shuffleArray(q.options) }));
+        currentPage = 0;
+        answers = {};
+        testCompleted = false;
+        document.getElementById('summaryContainer').innerHTML = '';
+        render();
+        renderNav();
+        scrollToTop();
+    }
+
+    function renderNav() {
+        const grid = document.getElementById('navGrid');
+        let html = '';
+        allQuestions.forEach((q, idx) => {
+            const userAnswer = answers[q.id];
+            let cls = 'nav-cell unanswered';
+            if (userAnswer) {
+                cls = userAnswer === q.correctAnswer ? 'nav-cell correct' : 'nav-cell wrong';
+            }
+            const start = currentPage * PER_PAGE;
+            if (idx >= start && idx < start + PER_PAGE) cls += ' current';
+            html += `<div class="${cls}" onclick="goToQuestion(${idx})" title="Вопрос ${q.id}">${q.id}</div>`;
+        });
+        grid.innerHTML = html;
+
+        let correct = 0, wrong = 0, unanswered = 0;
+        allQuestions.forEach(q => {
+            const a = answers[q.id];
+            if (!a) unanswered++;
+            else if (a === q.correctAnswer) correct++;
+            else wrong++;
+        });
+        document.getElementById('navCorrect').textContent = correct;
+        document.getElementById('navWrong').textContent = wrong;
+        document.getElementById('navUnanswered').textContent = unanswered;
+    }
+
+    function goToQuestion(index) {
+        currentPage = Math.floor(index / PER_PAGE);
+        render();
+        renderNav();
+        scrollToTop();
+    }
+
+    function render() {
+        const container = document.getElementById('questionsContainer');
+        const total = allQuestions.length;
+        const totalPages = Math.ceil(total / PER_PAGE);
+        const start = currentPage * PER_PAGE;
+        const pageItems = allQuestions.slice(start, start + PER_PAGE);
+
+        let correctCount = 0, answeredCount = 0;
+        allQuestions.forEach(q => {
+            if (answers[q.id]) {
+                answeredCount++;
+                if (answers[q.id] === q.correctAnswer) correctCount++;
+            }
+        });
+        document.getElementById('totalStats').textContent = `${correctCount} / ${total}`;
+
+        const progress = total > 0 ? Math.round((answeredCount / total) * 100) : 0;
+        document.getElementById('progressBar').style.width = progress + '%';
+
+        document.getElementById('pageInfo').textContent = `Страница ${currentPage + 1} из ${totalPages}`;
+        document.getElementById('prevBtn').disabled = currentPage === 0;
+        document.getElementById('nextBtn').disabled = currentPage >= totalPages - 1;
+
+        const allAnswered = allQuestions.every(q => answers[q.id] !== undefined);
+        if (allAnswered && !testCompleted && allQuestions.length > 0) {
+            testCompleted = true;
+            showSummary(correctCount, total);
+        }
+
+        let html = '';
+        pageItems.forEach((q) => {
+            const userAnswer = answers[q.id] || null;
+            const isCorrect = userAnswer && userAnswer === q.correctAnswer;
+            const isWrong = userAnswer && userAnswer !== q.correctAnswer;
+            let blockClass = 'question-block';
+            if (userAnswer) blockClass += isCorrect ? ' correct' : ' wrong';
+
+            html += `<div class="${blockClass}">`;
+            html += `<div class="question-text"><span class="q-label">Вопрос ${q.id}</span> ${q.question}</div>`;
+            html += `<div class="options">`;
+
+            q.options.forEach(opt => {
+                let optClass = 'option';
+                let disabled = false;
+                let checked = false;
+
+                if (userAnswer) {
+                    disabled = true;
+                    if (opt === userAnswer && isCorrect) optClass += ' selected-correct';
+                    else if (opt === userAnswer && isWrong) optClass += ' selected-wrong';
+                    else if (opt === q.correctAnswer && isWrong) optClass += ' show-correct';
+                    if (opt === userAnswer) checked = true;
+                }
+                if (disabled) optClass += ' disabled';
+
+                html += `
+                    <label class="${optClass}">
+                        <input type="radio" name="q${q.id}" value="${opt.replace(/"/g, '&quot;')}"
+                            ${checked ? 'checked' : ''} ${disabled ? 'disabled' : ''}
+                            onchange="selectAnswer(${q.id}, this.value)">
+                        ${opt}
+                    </label>
+                `;
+            });
+
+            html += `</div>`;
+            if (userAnswer) {
+                const label = isCorrect ? '✅ Верно' : '❌ Неверно';
+                const cls = isCorrect ? 'correct-text' : 'wrong-text';
+                html += `<div class="result-badge"><span class="${cls}">${label}</span></div>`;
+            }
+            html += `</div>`;
+        });
+
+        container.innerHTML = html || '<p style="text-align:center;color:#6a8aaa;">Нет вопросов</p>';
+        renderNav();
+    }
+
+    function showSummary(correct, total) {
+        const container = document.getElementById('summaryContainer');
+        const wrongQuestions = allQuestions.filter(q => answers[q.id] && answers[q.id] !== q.correctAnswer);
+        const correctQuestions = allQuestions.filter(q => answers[q.id] && answers[q.id] === q.correctAnswer);
+
+        let html = `
+            <div class="summary">
+                <h3>📊 Результаты теста</h3>
+                <div class="summary-stats">✅ Правильно: ${correct} из ${total} (${Math.round((correct/total)*100)}%)</div>
+                <div style="margin-bottom:12px;font-size:15px;">❌ Неправильно: ${wrongQuestions.length}</div>
+                <div style="font-size:16px;font-weight:600;margin:10px 0 6px;color:#b33a2e;">🔴 Вопросы, на которые дан неправильный ответ (${wrongQuestions.length}):</div>
+        `;
+
+        if (wrongQuestions.length === 0) {
+            html += `<p style="color:#1a7a3a;font-weight:600;">🎉 Все ответы верные! Отлично!</p>`;
+        } else {
+            wrongQuestions.forEach(q => {
+                html += `
+                    <div class="summary-item">
+                        <strong>${q.id}.</strong> ${q.question}<br>
+                        <span class="s-wrong">✗ Ваш ответ: ${answers[q.id]}</span><br>
+                        <span class="s-correct">✓ Правильный ответ: ${q.correctAnswer}</span>
+                    </div>
+                `;
+            });
+        }
+
+        if (correctQuestions.length > 0) {
+            html += `<div style="font-size:16px;font-weight:600;margin:16px 0 6px;color:#1a7a3a;">✅ Правильные ответы (${correctQuestions.length}):</div>`;
+            correctQuestions.forEach(q => {
+                html += `
+                    <div class="summary-item">
+                        <strong>${q.id}.</strong> ${q.question}<br>
+                        <span class="s-correct">✓ Верно: ${q.correctAnswer}</span>
+                    </div>
+                `;
+            });
+        }
+
+        html += `<button class="btn btn-primary hide-summary-btn" onclick="document.getElementById('summaryContainer').innerHTML='';">Скрыть сводку</button></div>`;
+        container.innerHTML = html;
+        container.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    function selectAnswer(questionId, selectedText) {
+        if (answers[questionId]) return;
+        answers[questionId] = selectedText;
+        render();
+        renderNav();
+    }
+
+    document.getElementById('prevBtn').addEventListener('click', () => {
+        if (currentPage > 0) { currentPage--; render(); renderNav(); scrollToTop(); }
+    });
+    document.getElementById('nextBtn').addEventListener('click', () => {
+        const totalPages = Math.ceil(allQuestions.length / PER_PAGE);
+        if (currentPage < totalPages - 1) { currentPage++; render(); renderNav(); scrollToTop(); }
+    });
+    document.getElementById('restartBtn').addEventListener('click', init);
+
+    init();
+</script>
+</body>
+</html>
